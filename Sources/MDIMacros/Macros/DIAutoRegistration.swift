@@ -16,15 +16,35 @@ extension DIAutoRegistration: MemberMacro {
         dump(node, to: &dumped)
 
         guard
-            let nodeArgumentList = node.arguments?.as(LabeledExprListSyntax.self),
-            nodeArgumentList.count == 2,
-            let returnType = nodeArgumentList.first?.expression.as(MemberAccessExprSyntax.self)?.base,
+            let nodeArgumentList = node.arguments?.as(LabeledExprListSyntax.self)
+        else {
+            context.addDiagnostics(
+                from: DIAutoRegistration.Errors.missingArguments,
+                node: node
+            )
+
+            return []
+        }
+
+        guard
+            let returnType = nodeArgumentList.first?.expression.as(MemberAccessExprSyntax.self)?.base
+        else {
+            context.addDiagnostics(
+                from: DIAutoRegistration.Errors.missingReturnType,
+                node: node
+            )
+
+            return []
+        }
+
+        guard
             let factory = nodeArgumentList.last?.expression
         else {
             context.addDiagnostics(
-                from: DIAutoRegistration.Errors.indexedError(1, node: dumped),
+                from: DIAutoRegistration.Errors.missingFactory,
                 node: node
             )
+
             return []
         }
 
@@ -62,19 +82,20 @@ extension DIAutoRegistration: MemberMacro {
 
 extension DIAutoRegistration {
     enum Errors: Error, CustomStringConvertible {
-        case undefinedReturnType
-        case indexedError(Int, node: String? = nil)
+        case missingArguments
+        case missingReturnType
+        case missingFactory
 
         var description: String {
             switch self {
-            case .undefinedReturnType:
-                return "Missing macro generic necessary for return type"
+            case .missingArguments:
+                return "Require return type and factory method"
 
-            case let .indexedError(index, node: node?):
-                return "Error #\(index): \(node)"
+            case .missingReturnType:
+                return "Missing or un-supported return type"
 
-            case let .indexedError(index, node: _):
-                return "Error #\(index)"
+            case .missingFactory:
+                return "Missing or un-supported factory expression"
             }
         }
     }

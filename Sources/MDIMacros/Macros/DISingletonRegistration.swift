@@ -1,3 +1,4 @@
+import Foundation
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
@@ -12,24 +13,11 @@ extension DISingletonRegistration: MemberMacro {
         providingMembersOf declaration: some DeclGroupSyntax,
         in context: some MacroExpansionContext
     ) throws -> [SwiftSyntax.DeclSyntax] {
-        var dumped = ""
-        dump(node, to: &dumped)
-
         guard
             let nodeArgumentList = node.arguments?.as(LabeledExprListSyntax.self)
         else {
             context.addDiagnostics(
-                from: DIAutoRegistration.Errors.indexedError(1, node: dumped),
-                node: node
-            )
-            return []
-        }
-
-        guard
-            nodeArgumentList.count == 2
-        else {
-            context.addDiagnostics(
-                from: DIAutoRegistration.Errors.indexedError(2, node: dumped),
+                from: DISingletonRegistration.Errors.missingArguments,
                 node: node
             )
             return []
@@ -39,7 +27,7 @@ extension DISingletonRegistration: MemberMacro {
             let returnType = nodeArgumentList.first?.expression.as(MemberAccessExprSyntax.self)?.base
         else {
             context.addDiagnostics(
-                from: DIAutoRegistration.Errors.indexedError(3, node: dumped),
+                from: DISingletonRegistration.Errors.missingReturnType,
                 node: node
             )
             return []
@@ -49,7 +37,7 @@ extension DISingletonRegistration: MemberMacro {
             let factory = nodeArgumentList.last?.expression
         else {
             context.addDiagnostics(
-                from: DIAutoRegistration.Errors.indexedError(4, node: dumped),
+                from: DISingletonRegistration.Errors.missingFactory,
                 node: node
             )
             return []
@@ -90,5 +78,28 @@ extension DISingletonRegistration: MemberMacro {
             }
             """
         ]
+    }
+}
+
+// MARK: - Errors
+
+extension DISingletonRegistration {
+    enum Errors: Error, CustomStringConvertible {
+        case missingArguments
+        case missingReturnType
+        case missingFactory
+
+        var description: String {
+            switch self {
+            case .missingArguments:
+                return "Require return type and factory method"
+
+            case .missingReturnType:
+                return "Missing or un-supported return type"
+
+            case .missingFactory:
+                return "Missing or un-supported factory expression"
+            }
+        }
     }
 }

@@ -1,36 +1,6 @@
 import Foundation
 import MDI
 
-protocol Animal { }
-
-struct Cat: Animal {
-    let name: String
-
-    init(name: String) {
-        self.name = name
-    }
-
-    init() {
-        self.init(name: "Luna")
-    }
-}
-
-protocol Virus { }
-
-struct SARSCov19: Virus { }
-
-protocol SickAnimal { }
-
-struct SickAnimalImpl: SickAnimal {
-    let animal: Animal
-    let virus: Virus
-
-    init(animal: Animal, virus: Virus) {
-        self.animal = animal
-        self.virus = virus
-    }
-}
-
 protocol Theme { }
 
 struct ThemeImpl: Theme { }
@@ -66,13 +36,26 @@ struct AppStateImpl: AppState {
     }
 }
 
+protocol ABTests { }
+protocol CodeGuards { }
+protocol ApplicationProxy { }
+
+struct ABTestsImpl: ABTests { }
+struct CodeGuardsImpl: CodeGuards { }
+struct ApplicationProxyImpl: ApplicationProxy {
+    init(
+        abTests: ABTests,
+        codeGuards: CodeGuards
+    ) {
+    }
+}
+
 @FactoryRegister((any AppState).self, parameterTypes: Date.self, String.self, factory: AppStateImpl.factory(date:version:))
 @SingletonRegister((any Theme).self, factory: ThemeImpl.init)
-@AutoRegister((any Virus).self, factory: SARSCov19.init)
-@AutoRegister((any Animal).self, factory: Cat.init(name:))
-@AutoRegister((any SickAnimal).self, factory: SickAnimalImpl.init(animal:virus:))
+@AutoRegister((any ABTests).self, factory: ABTestsImpl.init)
+@AutoRegister((any CodeGuards).self, factory: CodeGuardsImpl.init)
+@SingletonRegister((any ApplicationProxy).self, factory: ApplicationProxyImpl.init(abTests:codeGuards:))
 extension Dependency { }
 
 let appState: AppState = Dependency.resolve(Date(), "1.0.0")
-let theme: Theme = Dependency.resolve()
-let sickAnimal: SickAnimal = Dependency.resolve()
+let application: ApplicationProxy = Dependency.resolve()
