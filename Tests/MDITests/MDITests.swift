@@ -1,3 +1,4 @@
+import MDI
 import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 import XCTest
@@ -13,7 +14,31 @@ let testMacros: [String: Macro.Type] = [
 ]
 #endif
 
-final class MDITests: XCTestCase {
+final class MDITests: XCTestCase { }
+
+// MARK: - SetUp / TearDown
+
+extension MDITests {
+    override func setUp() {
+        super.setUp()
+
+        Self.mock((any AutoResolvedDependencyProtocol).self, factory: AutoResolvedDependencyMock.init)
+        Self.mock((any FactoryResolvedDependencyProtocol).self, factory: FactoryResolvedDependencyMock.init)
+        Self.mock((any SingletonResolvedDependencyProtocol).self, singleton: SingletonResolvedDependencyMock())
+    }
+
+    override func tearDown() {
+        Self.mock((any AutoResolvedDependencyProtocol).self, factory: nil)
+        Self.mock((any FactoryResolvedDependencyProtocol).self, factory: nil)
+        Self.mock((any SingletonResolvedDependencyProtocol).self, singleton: nil)
+
+        super.tearDown()
+    }
+}
+
+// MARK: - Macro expansion tests
+
+extension MDITests {
     func testFactoryRegister() throws {
 #if canImport(MDIMacros)
         assertMacroExpansion(
@@ -186,3 +211,26 @@ final class MDITests: XCTestCase {
 #endif
     }
 }
+
+// MARK: - Mocking tests
+
+extension MDITests {
+    func testMockTypeIsUsedForAutoRegisteredDependencyWhenRegistered() {
+        XCTAssertEqual(Self.resolve((any AutoResolvedDependencyProtocol).self).name(), "AutoResolvedDependencyMock")
+    }
+
+    func testMockTypeIsUsedForSingletonRegisteredDependencyWhenRegistered() {
+        XCTAssertEqual(Self.resolve((any SingletonResolvedDependencyProtocol).self).name(), "SingletonResolvedDependencyMock")
+    }
+
+    func testMockTypeIsUsedForFactoryRegisteredDependencyWhenRegistered() {
+        XCTAssertEqual(Self.resolve((any FactoryResolvedDependencyProtocol).self).name(), "FactoryResolvedDependencyMock")
+    }
+}
+
+// MARK: - Registration
+
+@AutoRegister((any AutoResolvedDependencyProtocol).self, factory: AutoResolvedDependencyImpl.init)
+@FactoryRegister((any FactoryResolvedDependencyProtocol).self, factory: FactoryResolvedDependencyImpl.init)
+@SingletonRegister((any SingletonResolvedDependencyProtocol).self, factory: SingletonResolvedDependencyImpl.init)
+extension MDITests { }

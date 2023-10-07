@@ -45,6 +45,7 @@ let package = Package(
             name: "MDITests",
             dependencies: [
                 "MDIMacros",
+                "MDI",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ]
         ),
