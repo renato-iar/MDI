@@ -74,16 +74,17 @@ final class MDITests: XCTestCase {
                 }
                 extension Dependency {
 
-                    fileprivate static let __macro_local_6sharedfMu_: (any TestProtocol) = {
-                        return (Test.init)()
-                    }()
-
                     static func resolve(_: (any TestProtocol).Type) -> (any TestProtocol) {
-                        return __macro_local_6sharedfMu_
+                        enum TestProtocol_Holder {
+                            static let shared: (any TestProtocol) = {
+                                (Test.init)()
+                            }()
+                        }
+                        return TestProtocol_Holder.shared
                     }
 
                     static func resolve() -> (any TestProtocol) {
-                        return __macro_local_6sharedfMu_
+                        return Self.resolve((any TestProtocol).self)
                     }
                 }
                 """,
