@@ -36,7 +36,24 @@ final class MDITests: XCTestCase {
                 }
                 extension Dependency {
 
+                    #if DEBUG
+                    fileprivate enum TestProtocol_MockHolder {
+                        static var mock: (() -> (any TestProtocol))? = nil
+                    }
+                    #endif
+
+                    static func mock(_: (any TestProtocol).Type, factory: (() -> (any TestProtocol))?) {
+                        #if DEBUG
+                        TestProtocol_MockHolder.mock = factory
+                        #endif
+                    }
+
                     static func resolve(_: (any TestProtocol).Type, _ arg0: Int) -> (any TestProtocol) {
+                        #if DEBUG
+                        if let mock = TestProtocol_MockHolder.mock {
+                            return mock()
+                        }
+                        #endif
                         return (Test.init(int:))(arg0)
                     }
 
@@ -74,12 +91,30 @@ final class MDITests: XCTestCase {
                 }
                 extension Dependency {
 
+                    #if DEBUG
+                    fileprivate enum TestProtocol_MockHolder {
+                        static var mock: (any TestProtocol)? = nil
+                    }
+                    #endif
+
+                    static func mock(_: (any TestProtocol).Type, singleton: (any TestProtocol)?) {
+                        #if DEBUG
+                        TestProtocol_MockHolder.mock = singleton
+                        #endif
+                    }
+
+                    fileprivate enum TestProtocol_Holder {
+                        static let shared: (any TestProtocol) = {
+                            (Test.init)()
+                        }()
+                    }
+
                     static func resolve(_: (any TestProtocol).Type) -> (any TestProtocol) {
-                        enum TestProtocol_Holder {
-                            static let shared: (any TestProtocol) = {
-                                (Test.init)()
-                            }()
+                        #if DEBUG
+                        if let mock = TestProtocol_MockHolder.mock {
+                            return mock
                         }
+                        #endif
                         return TestProtocol_Holder.shared
                     }
 
@@ -118,7 +153,24 @@ final class MDITests: XCTestCase {
                 }
                 extension Dependency {
 
+                    #if DEBUG
+                    fileprivate enum TestProtocol_MockHolder {
+                        static var mock: (() -> (any TestProtocol))? = nil
+                    }
+                    #endif
+
+                    static func mock(_: (any TestProtocol).Type, factory: (() -> (any TestProtocol))?) {
+                        #if DEBUG
+                        TestProtocol_MockHolder.mock = factory
+                        #endif
+                    }
+
                     static func resolve(_: (any TestProtocol).Type) -> (any TestProtocol) {
+                        #if DEBUG
+                        if let mock = TestProtocol_MockHolder.mock {
+                            return mock()
+                        }
+                        #endif
                         return (Test.init(nested:))(Self.resolve())
                     }
 
