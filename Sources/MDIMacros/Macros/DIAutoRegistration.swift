@@ -12,9 +12,6 @@ extension DIAutoRegistration: MemberMacro {
         providingMembersOf declaration: some DeclGroupSyntax,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        var dumped = ""
-        dump(node, to: &dumped)
-
         guard
             let nodeArgumentList = node.arguments?.as(LabeledExprListSyntax.self)
         else {

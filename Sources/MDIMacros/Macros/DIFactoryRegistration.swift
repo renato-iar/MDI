@@ -56,7 +56,6 @@ extension DIFactoryRegistration {
     enum Errors: Error, CustomStringConvertible {
         case missingReturnType
         case missingFactory
-        case indexedError(index: Int, dump: String?)
 
         var description: String {
             switch self {
@@ -65,12 +64,6 @@ extension DIFactoryRegistration {
 
             case .missingFactory:
                 return "Macro expects factory as last argument"
-
-            case let .indexedError(index: index, dump: dump?):
-                return "Error @[\(index)]: \(dump)"
-
-            case let .indexedError(index: index, dump: _):
-                return "Error @[\(index)]"
             }
         }
     }

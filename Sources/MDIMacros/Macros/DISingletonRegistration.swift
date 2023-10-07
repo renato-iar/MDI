@@ -13,7 +13,6 @@ extension DISingletonRegistration: MemberMacro {
         providingMembersOf declaration: some DeclGroupSyntax,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        dump(declaration)
         guard
             let containerName = extractContainerName(from: declaration)
         else {
