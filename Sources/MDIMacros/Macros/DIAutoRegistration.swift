@@ -59,9 +59,22 @@ extension DIAutoRegistration: MemberMacro {
             count: numberOfFactoryArguments
         ).joined(separator: ", ")
 
-        return [
+        guard let returnTypeName = SyntaxUtils.getPlainTypeName(from: returnType) else {
+            context.addDiagnostics(
+                from: DIAutoRegistration.Errors.unsupportedType,
+                node: declaration
+            )
+            return []
+        }
+
+        var declarations = SyntaxUtils.generateMockFunction(for: returnType, with: returnTypeName)
+
+        declarations.append(contentsOf: [
             """
             static func resolve(_: \(returnType).Type) -> \(returnType) {
+                #if DEBUG
+                \(raw: SyntaxUtils.generateMockFunctionCall(with: returnTypeName))
+                #endif
                 return (\(factory))(\(raw: call))
             }
             """,
@@ -71,7 +84,9 @@ extension DIAutoRegistration: MemberMacro {
                 return resolve(\(returnType).self)
             }
             """
-        ]
+        ])
+
+        return declarations
     }
 }
 
@@ -82,6 +97,7 @@ extension DIAutoRegistration {
         case missingArguments
         case missingReturnType
         case missingFactory
+        case unsupportedType
 
         var description: String {
             switch self {
@@ -93,6 +109,9 @@ extension DIAutoRegistration {
 
             case .missingFactory:
                 return "Missing or un-supported factory expression"
+
+            case .unsupportedType:
+                return "Registered type is not supported"
             }
         }
     }

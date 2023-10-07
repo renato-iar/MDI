@@ -14,7 +14,7 @@ extension DISingletonRegistration: MemberMacro {
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
         guard
-            let containerName = extractContainerName(from: declaration)
+            let containerName = SyntaxUtils.getContainerName(from: declaration)
         else {
             context.addDiagnostics(
                 from: DISingletonRegistration.Errors.invalidDeclaration,
@@ -46,6 +46,16 @@ extension DISingletonRegistration: MemberMacro {
         }
 
         guard
+            let returnTypeName = SyntaxUtils.getPlainTypeName(from: returnType)
+        else {
+            context.addDiagnostics(
+                from: DISingletonRegistration.Errors.unsupportedType,
+                node: node
+            )
+            return []
+        }
+
+        guard
             let factory = nodeArgumentList.last?.expression
         else {
             context.addDiagnostics(
@@ -69,22 +79,39 @@ extension DISingletonRegistration: MemberMacro {
             count: numberOfFactoryArguments
         ).joined(separator: ", ")
 
-        let holderTypeName: String
-
-        if let typeName = flattenTypeName(from: returnType) {
-            holderTypeName = "\(typeName)_Holder"
-        } else {
-            holderTypeName = "Holder"
-        }
+        let holderTypeName = "\(returnTypeName)_Holder"
+        let mockHolderTypeName = "\(returnTypeName)_MockHolder"
 
         return [
             """
+            #if DEBUG
+            fileprivate enum \(raw: mockHolderTypeName) {
+                static var mock: \(returnType)? = nil
+            }
+            #endif
+            """,
+
+            """
+            static func mock(_: \(returnType).Type, singleton: \(returnType)?) {
+                #if DEBUG
+                \(raw: mockHolderTypeName).mock = singleton
+                #endif
+            }
+            """,
+
+            """
+            fileprivate enum \(raw: holderTypeName) {
+                static let shared: \(returnType) = {
+                    (\(factory))(\(raw: call))
+                }()
+            }
+            """,
+
+            """
             static func resolve(_: \(returnType).Type) -> \(returnType) {
-                enum \(raw: holderTypeName) {
-                    static let shared: \(returnType) = {
-                        (\(factory))(\(raw: call))
-                    }()
-                }
+                #if DEBUG
+                if let mock = \(raw: mockHolderTypeName).mock { return mock }
+                #endif
                 return \(raw: holderTypeName).shared
             }
             """,
@@ -106,6 +133,7 @@ extension DISingletonRegistration {
         case missingArguments
         case missingReturnType
         case missingFactory
+        case unsupportedType
 
         var description: String {
             switch self {
@@ -120,50 +148,10 @@ extension DISingletonRegistration {
 
             case .missingFactory:
                 return "Missing or un-supported factory expression"
+
+            case .unsupportedType:
+                return "Registered type is not supported"
             }
         }
-    }
-}
-
-// MARK: - Utilities
-
-private extension DISingletonRegistration {
-    static func flattenTypeName(from syntax: SyntaxProtocol) -> String? {
-        if let identifier = syntax.as(IdentifierTypeSyntax.self) {
-            return identifier.name.text
-        }
-
-        if let labeledExpression = syntax.as(LabeledExprSyntax.self)?.expression.as(TypeExprSyntax.self) {
-            return flattenTypeName(from: labeledExpression)
-        }
-
-        if let tuple = syntax.as(TupleExprSyntax.self) {
-            if
-                tuple.elements.count == 1,
-                let containedType = tuple.elements.first
-            {
-                return flattenTypeName(from: containedType)
-            } else {
-                return tuple.debugDescription
-            }
-        }
-
-        if let someOrAnyType = syntax.as(TypeExprSyntax.self)?.type.as(SomeOrAnyTypeSyntax.self) {
-            return flattenTypeName(from: someOrAnyType.constraint)
-        }
-
-        return nil
-    }
-
-    static func extractContainerName(from declaration: DeclGroupSyntax) -> String? {
-        if let extendedType = declaration.as(ExtensionDeclSyntax.self)?.extendedType {
-            return flattenTypeName(from: extendedType)
-        }
-
-        return
-            declaration.as(ClassDeclSyntax.self)?.name.text ??
-            declaration.as(StructDeclSyntax.self)?.name.text ??
-            declaration.as(EnumDeclSyntax.self)?.name.text ??
-            declaration.as(ActorDeclSyntax.self)?.name.text
     }
 }

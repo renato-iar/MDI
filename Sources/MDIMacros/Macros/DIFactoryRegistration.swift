@@ -13,9 +13,29 @@ extension DIFactoryRegistration: MemberMacro {
         providingMembersOf declaration: some DeclGroupSyntax,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        let factory = try extractFactory(from: node)
-        let returnType = try extractReturnType(from: node)
-        let factoryTypes = extractFactoryTypes(from: node)
+        guard
+            let factory = SyntaxUtils.getFactoryExpression(from: node)
+        else {
+            context.addDiagnostics(
+                from: DIFactoryRegistration.Errors.missingFactory,
+                node: node
+            )
+
+            return []
+        }
+
+        guard
+            let returnType = SyntaxUtils.getRegisteredType(from: node)
+        else {
+            context.addDiagnostics(
+                from: DIFactoryRegistration.Errors.missingReturnType,
+                node: node
+            )
+
+            return []
+        }
+
+        let factoryTypes = SyntaxUtils.getFactoryParameterTypes(from: node)
         let factoryParameters = factoryTypes
             .enumerated()
             .map { index, type in
@@ -24,29 +44,58 @@ extension DIFactoryRegistration: MemberMacro {
             .joined(separator: ", ")
         let factoryArguments = factoryTypes.enumerated().map { index, _ in "arg\(index)" }.joined(separator: ", ")
 
-        if factoryTypes.isEmpty {
-            return [
-                """
-                static func resolve(_: \(returnType).Type) -> \(returnType) {
-                    return (\(factory))()
-                }
-                """
-            ]
-        } else {
-            return [
-                """
-                static func resolve(_: \(returnType).Type, \(raw: factoryParameters)) -> \(returnType) {
-                    return (\(factory))(\(raw: factoryArguments))
-                }
-                """,
+        guard let returnTypePlainName = SyntaxUtils.getPlainTypeName(from: returnType) else {
+            context.addDiagnostics(
+                from: DIFactoryRegistration.Errors.unsupportedType,
+                node: declaration
+            )
 
-                """
-                static func resolve(\(raw: factoryParameters)) -> \(returnType) {
-                    return (\(factory))(\(raw: factoryArguments))
-                }
-                """
-            ]
+            return []
         }
+
+        var declarations: [DeclSyntax] = SyntaxUtils.generateMockFunction(
+            for: returnType,
+            with: returnTypePlainName
+        )
+
+        if factoryTypes.isEmpty {
+            declarations.append(contentsOf: [
+                    """
+                    static func resolve(_: \(returnType).Type) -> \(returnType) {
+                        #if DEBUG
+                        \(raw: SyntaxUtils.generateMockFunctionCall(with: returnTypePlainName))
+                        #endif
+                        return (\(factory))()
+                    }
+                    """,
+                    """
+                    static func resolve() -> \(returnType) {
+                        return resolve(\(returnType).self)
+                    }
+                    """
+                ]
+            )
+        } else {
+            declarations.append(contentsOf: [
+                    """
+                    static func resolve(_: \(returnType).Type, \(raw: factoryParameters)) -> \(returnType) {
+                        #if DEBUG
+                        \(raw: SyntaxUtils.generateMockFunctionCall(with: returnTypePlainName))
+                        #endif
+                        return (\(factory))(\(raw: factoryArguments))
+                    }
+                    """,
+
+                    """
+                    static func resolve(\(raw: factoryParameters)) -> \(returnType) {
+                        return (\(factory))(\(raw: factoryArguments))
+                    }
+                    """
+                ]
+            )
+        }
+
+        return declarations
     }
 }
 
@@ -56,6 +105,7 @@ extension DIFactoryRegistration {
     enum Errors: Error, CustomStringConvertible {
         case missingReturnType
         case missingFactory
+        case unsupportedType
 
         var description: String {
             switch self {
@@ -64,58 +114,10 @@ extension DIFactoryRegistration {
 
             case .missingFactory:
                 return "Macro expects factory as last argument"
+
+            case .unsupportedType:
+                return "Registered type is not supported"
             }
         }
-    }
-}
-
-// MARK: - Utils
-
-private extension DIFactoryRegistration {
-    static func extractReturnType(from node: AttributeSyntax) throws -> ExprSyntax {
-        guard
-            let returnType = node
-                .arguments?
-                .as(LabeledExprListSyntax.self)?
-                .first?
-                .as(LabeledExprSyntax.self)?
-                .expression
-                .as(MemberAccessExprSyntax.self)?
-                .base
-        else {
-            throw DIFactoryRegistration.Errors.missingReturnType
-        }
-
-        return returnType
-    }
-
-    static func extractFactoryTypes(from node: AttributeSyntax) -> [ExprSyntax] {
-        guard
-            let types = node.arguments?.as(LabeledExprListSyntax.self)?.compactMap({ $0 }),
-            types.count > 2
-        else {
-            return []
-        }
-
-        return (1 ..< types.count - 1).compactMap { index in
-            types[index].as(LabeledExprSyntax.self)?.expression.as(MemberAccessExprSyntax.self)?.base
-        }
-    }
-
-    static func extractFactory(from node: AttributeSyntax) throws -> ExprSyntax {
-        guard
-            let arguments = node
-                .arguments?
-                .as(LabeledExprListSyntax.self),
-            arguments.count > 1,
-            let factory = arguments
-                .last?
-                .as(LabeledExprSyntax.self)?
-                .expression
-        else {
-            throw DIFactoryRegistration.Errors.missingFactory
-        }
-
-        return factory
     }
 }
