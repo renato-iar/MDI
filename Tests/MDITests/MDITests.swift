@@ -63,11 +63,11 @@ extension MDITests {
 
                     #if DEBUG
                     fileprivate enum TestProtocol_MockHolder {
-                        static var mock: (() -> (any TestProtocol))? = nil
+                        static var mock: ((Int) -> (any TestProtocol))? = nil
                     }
                     #endif
 
-                    static func mock(_: (any TestProtocol).Type, factory: (() -> (any TestProtocol))?) {
+                    static func mock(_: (any TestProtocol).Type, factory: ((Int) -> (any TestProtocol))?) {
                         #if DEBUG
                         TestProtocol_MockHolder.mock = factory
                         #endif
@@ -76,14 +76,14 @@ extension MDITests {
                     static func resolve(_: (any TestProtocol).Type, _ arg0: Int) -> (any TestProtocol) {
                         #if DEBUG
                         if let mock = TestProtocol_MockHolder.mock {
-                            return mock()
+                            return mock(arg0)
                         }
                         #endif
                         return (Test.init(int:))(arg0)
                     }
 
                     static func resolve(_ arg0: Int) -> (any TestProtocol) {
-                        return (Test.init(int:))(arg0)
+                        return resolve((any TestProtocol).self, arg0)
                     }
                 }
                 """,

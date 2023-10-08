@@ -17,20 +17,23 @@ enum SyntaxUtils {
      */
     static func generateMockFunction(
         for returnType: ExprSyntax,
-        with plainTypeName: String
+        with plainTypeName: String,
+        parameters: [ExprSyntax] = []
     ) -> [DeclSyntax] {
         let mockHolderName = "\(plainTypeName)_MockHolder"
+        let functionTypes = parameters.map { $0.description }.joined(separator: ", ")
+
         return [
             """
             #if DEBUG
             fileprivate enum \(raw: mockHolderName) {
-                static var mock: (() -> \(returnType))? = nil
+                static var mock: ((\(raw: functionTypes)) -> \(returnType))? = nil
             }
             #endif
             """,
 
             """
-            static func mock(_: \(returnType).Type, factory: (() -> \(returnType))?) {
+            static func mock(_: \(returnType).Type, factory: ((\(raw: functionTypes)) -> \(returnType))?) {
                 #if DEBUG
                 \(raw: mockHolderName).mock = factory
                 #endif
@@ -40,9 +43,12 @@ enum SyntaxUtils {
     }
 
     static func generateMockFunctionCall(
-        with plainTypeName: String
+        with plainTypeName: String,
+        arguments: [String] = []
     ) -> String {
-        "if let mock = \(plainTypeName)_MockHolder.mock { return mock() }"
+        let call = arguments.joined(separator: ", ")
+
+        return "if let mock = \(plainTypeName)_MockHolder.mock { return mock(\(call)) }"
     }
 
     /**
