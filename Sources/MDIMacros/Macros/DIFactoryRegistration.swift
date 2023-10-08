@@ -42,7 +42,8 @@ extension DIFactoryRegistration: MemberMacro {
                 "_ arg\(index): \(type)"
             }
             .joined(separator: ", ")
-        let factoryArguments = factoryTypes.enumerated().map { index, _ in "arg\(index)" }.joined(separator: ", ")
+        let factoryParameterNames = (0 ..< factoryTypes.count).map { "arg\($0)" }
+        let factoryArguments = factoryParameterNames.joined(separator: ", ")
 
         guard let returnTypePlainName = SyntaxUtils.getPlainTypeName(from: returnType) else {
             context.addDiagnostics(
@@ -55,7 +56,8 @@ extension DIFactoryRegistration: MemberMacro {
 
         var declarations: [DeclSyntax] = SyntaxUtils.generateMockFunction(
             for: returnType,
-            with: returnTypePlainName
+            with: returnTypePlainName,
+            parameters: factoryTypes
         )
 
         if factoryTypes.isEmpty {
@@ -80,7 +82,7 @@ extension DIFactoryRegistration: MemberMacro {
                     """
                     static func resolve(_: \(returnType).Type, \(raw: factoryParameters)) -> \(returnType) {
                         #if DEBUG
-                        \(raw: SyntaxUtils.generateMockFunctionCall(with: returnTypePlainName))
+                        \(raw: SyntaxUtils.generateMockFunctionCall(with: returnTypePlainName, arguments: factoryParameterNames))
                         #endif
                         return (\(factory))(\(raw: factoryArguments))
                     }
@@ -88,7 +90,7 @@ extension DIFactoryRegistration: MemberMacro {
 
                     """
                     static func resolve(\(raw: factoryParameters)) -> \(returnType) {
-                        return (\(factory))(\(raw: factoryArguments))
+                        return resolve(\(returnType).self, \(raw: factoryArguments))
                     }
                     """
                 ]
