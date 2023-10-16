@@ -139,6 +139,14 @@ enum SyntaxUtils {
             return identifier.name.text
         }
 
+        if let decl = syntax.as(DeclReferenceExprSyntax.self) {
+            return decl.baseName.text
+        }
+
+        if let member = syntax.as(MemberAccessExprSyntax.self)?.base {
+            return getPlainTypeName(from: member)
+        }
+
         if let labeledExpression = syntax.as(LabeledExprSyntax.self)?.expression.as(TypeExprSyntax.self) {
             return getPlainTypeName(from: labeledExpression)
         }
