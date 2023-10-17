@@ -12,11 +12,7 @@ let package = Package(
         .library(
             name: "MDI",
             targets: ["MDI"]
-        ),
-        .executable(
-            name: "MDIClient",
-            targets: ["MDIClient"]
-        ),
+        )
     ],
     dependencies: [
         // Depend on the Swift 5.9 release of SwiftSyntax
