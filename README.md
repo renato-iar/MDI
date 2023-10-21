@@ -61,9 +61,9 @@ And then create an assembly to register them:
 ```
 import MDI
 
-@SingletonRegister((any ABTestingProtocol).self, factory: ABTesting.init)
-@SingletonRegister((any CodeGuardsProtocol).self, factory: CodeGuards.init)
-@SingletonRegister((any ThemeProtocol).self, factory: Theme.init(abTesting:codeGuards:))
+@SingletonRegister((any ABTestingProtocol).self, using: ABTesting.init)
+@SingletonRegister((any CodeGuardsProtocol).self, using: CodeGuards.init)
+@SingletonRegister((any ThemeProtocol).self, parameterTypes: (any ABTestingProtocol).self, (any CodeGuardsProtocol).self, using: Theme.init(abTesting:codeGuards:))
 extension Dependency { }
 ```
 
@@ -76,9 +76,9 @@ If instead `@AutoRegister` was used:
 ```
 import MDI
 
-@AutoRegister((any ABTestingProtocol).self, factory: ABTesting.init)
-@AutoRegister((any CodeGuardsProtocol).self, factory: CodeGuards.init)
-@AutoRegister((any ThemeProtocol).self, factory: Theme.init(abTesting:codeGuards:))
+@AutoRegister((any ABTestingProtocol).self, using: ABTesting.init)
+@AutoRegister((any CodeGuardsProtocol).self, using: CodeGuards.init)
+@AutoRegister((any ThemeProtocol).self, parameterTypes: (any ABTestingProtocol).self, (any CodeGuardsProtocol).self, using: Theme.init(abTesting:codeGuards:))
 extension Dependency { }
 ```
 
@@ -113,37 +113,6 @@ Using `@FactoryRegister` we can expose the required parameters while even levera
 ```
 import MDI
 
-private extension AppContext {
-    static func factory(
-        boot: Date,
-        sessionId: String
-    ) -> AppContext {
-        return AppContext(
-            boot: boot,
-            sessionId: sessionId,
-            theme: Dependency.resolve()
-        )
-    }
-}
-
-@FactoryRegister(
-    (any AppContextProtocol).self,
-    parameterTypes: Date.self, String.self,
-    factory: AppContext.factory(boot:sessionId:)
-)
-extension Dependency { }
-```
-
-Using this approach, `Dependency` will expose a `resolve` method typed:
-```
-Dependency.resolve(_ arg1: Date, _ arg1: String) -> any AppContextProtocol
-``````
-
-A variant of `@FactoryRegister` that allows for auto-resolution of dependencies exists.
-Use the cases of `MDIFactoryDependency` to state wether the type is `resolved` or `explicit`.
-E.g. if we have some factory that has dependencies that can be resolver, and others that cannot, as in the previous example:
-
-```swift
 @FactoryRegister(
     (any AppContextProtocol).self,
     parameterTypes: .explicit(Date.self), .explicit(String.self), .resolved((any Theme).self),
@@ -168,7 +137,7 @@ Variants for the previous macros exist, supporting opaque types:
 
 - `@OpaqueAutoRegister` is equivalent to `@AutoRegister`
 - `@OpaqueSingletonRegister` is equivalent to `@SingletonRegister`
-- `@OpaqueFactoryRegister` is equivalent to `@FactoryAutoRegister` (no equivalent of `@FactoryRegister` is provided as it is mostly pointless)
+- `@OpaqueFactoryRegister` is equivalent to `@FactoryRegister`
 
 The main differences being:
 

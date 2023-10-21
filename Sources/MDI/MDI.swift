@@ -1,16 +1,18 @@
-// MARK: - Existencial
+// MARK: - Existencial -
 
 /**
  Registers a dependency into the assembly, by auto-resolving all dependencies
 
  - parameters:
     - type: The type being registered into the assembly; typically a `protocol`. Will be the return type when calling `resolve`
+    - parameterTypes: The types of each input necessary to execute the `factory`
     - factory: The factory to be used to resolve the dependency. Typically a `init` for some type conforming to the dependency type
  */
 @attached(member, names: arbitrary)
 public macro AutoRegister<each Parameter, ResolvedType>(
     _ type: ResolvedType.Type,
-    factory: (repeat each Parameter) -> ResolvedType
+    parameterTypes: repeat (each Parameter).Type,
+    using factory: (repeat each Parameter) -> ResolvedType
 ) = #externalMacro(module: "MDIMacros", type: "DIAutoRegistration")
 
 /**
@@ -18,12 +20,14 @@ public macro AutoRegister<each Parameter, ResolvedType>(
 
  - parameters:
     - type: The type being registered into the assembly; typically a `protocol`. Will be the return type when calling `resolve`
+    - parameterTypes: The types of each input necessary to execute the `factory`
     - factory: The factory to be used to resolve the dependency. Typically a `init` for some type conforming to the dependency type
  */
 @attached(member, names: arbitrary)
 public macro SingletonRegister<each Parameter, ResolvedType>(
     _ type: ResolvedType.Type,
-    factory: (repeat each Parameter) -> ResolvedType
+    parameterTypes: repeat (each Parameter).Type,
+    using factory: (repeat each Parameter) -> ResolvedType
 ) = #externalMacro(module: "MDIMacros", type: "DISingletonRegistration")
 
 /**
@@ -36,6 +40,7 @@ public macro SingletonRegister<each Parameter, ResolvedType>(
 
  - note: `factory` might be a `init` for the concrete type, or a wrapper method, e.g. resolving all type dependencies via `resolve()` while exposing only non-resolvable parameters
  */
+@available(*, deprecated, message: "Use FactoryRegister(_:parameterTypes:using:) instead")
 @attached(member, names: arbitrary)
 public macro FactoryRegister<each Parameter, ResolvedType>(
     _ type: ResolvedType.Type,
@@ -96,7 +101,7 @@ public macro FactoryRegister<each Parameter, ResolvedType>(
     using factory: (repeat each Parameter) -> ResolvedType
 ) = #externalMacro(module: "MDIMacros", type: "DIFactoryAutoRegistration")
 
-// MARK: - Opaque
+// MARK: - Opaque -
 
 /**
  Registers a dependency into the assembly as an opaque type, by auto-resolving all dependencies
@@ -110,7 +115,7 @@ public macro FactoryRegister<each Parameter, ResolvedType>(
 public macro OpaqueAutoRegister<each Parameter, ResolvedType>(
     _ type: ResolvedType.Type,
     parameterTypes: repeat (each Parameter).Type,
-    factory: (repeat each Parameter) -> ResolvedType
+    using factory: (repeat each Parameter) -> ResolvedType
 ) = #externalMacro(module: "MDIMacros", type: "DIOpaqueAutoRegistration")
 
 /**
@@ -125,7 +130,7 @@ public macro OpaqueAutoRegister<each Parameter, ResolvedType>(
 public macro OpaqueSingletonRegister<each Parameter, ResolvedType>(
     _ type: ResolvedType.Type,
     parameterTypes: repeat (each Parameter).Type,
-    factory: (repeat each Parameter) -> ResolvedType
+    using factory: (repeat each Parameter) -> ResolvedType
 ) = #externalMacro(module: "MDIMacros", type: "DIOpaqueSingletonRegistration")
 
 /**

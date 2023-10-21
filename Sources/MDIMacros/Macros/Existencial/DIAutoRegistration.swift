@@ -56,20 +56,6 @@ extension DIAutoRegistration: MemberMacro {
             return []
         }
 
-        let numberOfFactoryArguments: Int = {
-            factory
-                .as(MemberAccessExprSyntax.self)?
-                .declName
-                .argumentNames?
-                .arguments
-                .count ?? 0
-        }()
-
-        let call = Array(
-            repeating: "\(containerName).resolve()",
-            count: numberOfFactoryArguments
-        ).joined(separator: ", ")
-
         guard let returnTypeName = SyntaxUtils.getPlainTypeName(from: returnType) else {
             context.addDiagnostics(
                 from: DIAutoRegistration.Errors.unsupportedType,
@@ -78,6 +64,10 @@ extension DIAutoRegistration: MemberMacro {
             return []
         }
 
+        let call = SyntaxUtils
+            .getFactoryParameterTypes(from: node)
+            .map { "\(containerName).resolve(\($0).self)" }
+            .joined(separator: ", ")
         var declarations = SyntaxUtils.generateMockFunction(for: returnType, with: returnTypeName)
 
         declarations.append(contentsOf: [

@@ -135,7 +135,7 @@ extension MDIExistencialTests {
                             return mock(arg0)
                         }
                         #endif
-                        return (Test.init(theme:int:))(Dependency.resolve(), arg0)
+                        return (Test.init(theme:int:))(Dependency.resolve((any Theme).self), arg0)
                     }
 
                     static func resolve(_ arg0: Int) -> (any TestProtocol) {
@@ -221,7 +221,7 @@ extension MDIExistencialTests {
                     init(nested: any Nested) { }
                 }
 
-                @AutoRegister((any TestProtocol).self, factory: Test.init(nested:))
+                @AutoRegister((any TestProtocol).self, parameterTypes: (any Nested).self, using: Test.init(nested:))
                 extension Dependency {
                 }
                 """,
@@ -252,7 +252,7 @@ extension MDIExistencialTests {
                             return mock()
                         }
                         #endif
-                        return (Test.init(nested:))(Dependency.resolve())
+                        return (Test.init(nested:))(Dependency.resolve((any Nested).self))
                     }
 
                     static func resolve() -> (any TestProtocol) {
@@ -286,7 +286,7 @@ extension MDIExistencialTests {
 
 // MARK: - Registration
 
-@AutoRegister((any AutoResolvedDependencyProtocol).self, factory: AutoResolvedDependencyImpl.init)
-@FactoryRegister((any FactoryResolvedDependencyProtocol).self, factory: FactoryResolvedDependencyImpl.init)
-@SingletonRegister((any SingletonResolvedDependencyProtocol).self, factory: SingletonResolvedDependencyImpl.init)
+@AutoRegister((any AutoResolvedDependencyProtocol).self, using: AutoResolvedDependencyImpl.init)
+@FactoryRegister((any FactoryResolvedDependencyProtocol).self, using: FactoryResolvedDependencyImpl.init)
+@SingletonRegister((any SingletonResolvedDependencyProtocol).self, using: SingletonResolvedDependencyImpl.init)
 extension MDIExistencialTests { }

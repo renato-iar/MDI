@@ -65,20 +65,10 @@ extension DISingletonRegistration: MemberMacro {
             return []
         }
 
-        let numberOfFactoryArguments: Int = {
-            factory
-                .as(MemberAccessExprSyntax.self)?
-                .declName
-                .argumentNames?
-                .arguments
-                .count ?? 0
-        }()
-
-        let call = Array(
-            repeating: "\(containerName).resolve()",
-            count: numberOfFactoryArguments
-        ).joined(separator: ", ")
-
+        let call = SyntaxUtils
+            .getFactoryParameterTypes(from: node)
+            .map { "\(containerName).resolve(\($0).self)" }
+            .joined(separator: ", ")
         let holderTypeName = "\(returnTypeName)_Holder"
         let mockHolderTypeName = "\(returnTypeName)_MockHolder"
 

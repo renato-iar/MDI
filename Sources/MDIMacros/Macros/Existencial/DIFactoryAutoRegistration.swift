@@ -59,7 +59,7 @@ extension DIFactoryAutoRegistration: MemberMacro {
         let factoryArguments = factoryTypesFull
             .map { resolve, type in
                 if resolve {
-                    return "\(containerName).resolve()"
+                    return "\(containerName).resolve(\(type).self)"
                 } else {
                     argIndex += 1
                     return "arg\(argIndex-1)"
