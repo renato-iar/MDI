@@ -6,6 +6,7 @@ struct MDIPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         DIAutoRegistration.self,
         DISingletonRegistration.self,
-        DIFactoryRegistration.self
+        DIFactoryRegistration.self,
+        DIFactoryAutoRegistration.self
     ]
 }

@@ -18,7 +18,7 @@ enum SyntaxUtils {
     static func generateMockFunction(
         for returnType: ExprSyntax,
         with plainTypeName: String,
-        parameters: [ExprSyntax] = []
+        parameters: [SyntaxProtocol] = []
     ) -> [DeclSyntax] {
         let mockHolderName = "\(plainTypeName)_MockHolder"
         let functionTypes = parameters.map { $0.description }.joined(separator: ", ")
@@ -111,6 +111,40 @@ enum SyntaxUtils {
         return (1 ..< types.count - 1).compactMap { index in
             types[index].as(LabeledExprSyntax.self)?.expression.as(MemberAccessExprSyntax.self)?.base
         }
+    }
+
+    static func getFactoryRegistrableParameterTypes(from node: AttributeSyntax) -> [(resolve: Bool, type: SyntaxProtocol)] {
+        guard
+            let types = node.arguments?.as(LabeledExprListSyntax.self)?.compactMap({ $0 }),
+            types.count > 2
+        else {
+            return []
+        }
+
+        return types
+            .inRange(1 ..< types.count - 1)
+            .compactMap { type -> (Bool, SyntaxProtocol)? in
+                guard
+                    let enumerationItem = type.as(LabeledExprSyntax.self)?.expression.as(FunctionCallExprSyntax.self),
+                    let caseName = enumerationItem.calledExpression.as(MemberAccessExprSyntax.self)?.declName.baseName.text,
+                    enumerationItem.arguments.count == 1,
+                    let dependency = enumerationItem.arguments.first?.expression.as(MemberAccessExprSyntax.self)?.base
+                else {
+                    return nil
+                }
+
+                let resolve: Bool
+
+                if caseName == "resolved" {
+                    resolve = true
+                } else if caseName == "explicit" {
+                    resolve = false
+                } else {
+                    return nil
+                }
+
+                return (resolve, dependency)
+            }
     }
 
     /**

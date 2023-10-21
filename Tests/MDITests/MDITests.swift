@@ -10,6 +10,7 @@ import MDIMacros
 let testMacros: [String: Macro.Type] = [
     "AutoRegister": DIAutoRegistration.self,
     "FactoryRegister": DIFactoryRegistration.self,
+    "FactoryAutoRegister": DIFactoryAutoRegistration.self,
     "SingletonRegister": DISingletonRegistration.self
 ]
 #endif
@@ -80,6 +81,61 @@ extension MDITests {
                         }
                         #endif
                         return (Test.init(int:))(arg0)
+                    }
+
+                    static func resolve(_ arg0: Int) -> (any TestProtocol) {
+                        return resolve((any TestProtocol).self, arg0)
+                    }
+                }
+                """,
+                macros: testMacros
+        )
+#else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+#endif
+    }
+
+    func testFactoryAutoRegister() throws {
+#if canImport(MDIMacros)
+        assertMacroExpansion(
+                """
+                protocol TestProtocol {}
+                struct Test: TestProtocol {
+                    init(theme: any Theme, int: Int) { }
+                }
+
+                @FactoryAutoRegister((any TestProtocol).self, parameterTypes: .resolved((any Theme).self), .explicit(Int.self), using: Test.init(theme:int:))
+                extension Dependency {
+                }
+                """,
+                expandedSource:
+                """
+
+                protocol TestProtocol {}
+                struct Test: TestProtocol {
+                    init(theme: any Theme, int: Int) { }
+                }
+                extension Dependency {
+
+                    #if DEBUG
+                    fileprivate enum TestProtocol_MockHolder {
+                        static var mock: ((Int) -> (any TestProtocol))? = nil
+                    }
+                    #endif
+
+                    static func mock(_: (any TestProtocol).Type, factory: ((Int) -> (any TestProtocol))?) {
+                        #if DEBUG
+                        TestProtocol_MockHolder.mock = factory
+                        #endif
+                    }
+
+                    static func resolve(_: (any TestProtocol).Type, _ arg0: Int) -> (any TestProtocol) {
+                        #if DEBUG
+                        if let mock = TestProtocol_MockHolder.mock {
+                            return mock(arg0)
+                        }
+                        #endif
+                        return (Test.init(theme:int:))(Self.resolve(), arg0)
                     }
 
                     static func resolve(_ arg0: Int) -> (any TestProtocol) {
