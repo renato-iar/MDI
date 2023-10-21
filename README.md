@@ -23,6 +23,8 @@ Presently, the following limitations exist (due to compiler bug):
 
 ## Example Usage
 
+### Plain types & existencials
+
 Define some type that will serve both as the "assembly hub" and the resolution entry point.
 (As stated in Limitations, `enum`s are not supported).
 
@@ -159,6 +161,19 @@ extension Dependency {
     }
 }
 ```
+
+### Opaque types
+
+Variants for the previous macros exist, supporting opaque types:
+
+- `@OpaqueAutoRegister` is equivalent to `@AutoRegister`
+- `@OpaqueSingletonRegister` is equivalent to `@SingletonRegister`
+- `@OpaqueFactoryRegister` is equivalent to `@FactoryAutoRegister` (no equivalent of `@FactoryRegister` is provided as it is mostly pointless)
+
+The main differences being:
+
+- All macros expect explicit typing of the factory's parameters through `parameterTypes`; these will be used to univoquely resolve types
+- The factory used to create the instance must resolve into a concrete type, or to an opaque type itself
 
 ## Installation
 
