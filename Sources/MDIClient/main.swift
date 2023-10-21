@@ -17,7 +17,7 @@ struct AppStateImpl: AppState {
     private let boot: Date
     private let version: String
 
-    private init(
+    init(
         theme: Theme,
         boot date: Date,
         version: String
@@ -50,10 +50,10 @@ struct ApplicationProxyImpl: ApplicationProxy {
     }
 }
 
-@FactoryRegister((any AppState).self, parameterTypes: Date.self, String.self, factory: AppStateImpl.factory(date:version:))
+@FactoryRegister((any AppState).self, parameterTypes: .resolved((any Theme).self), .explicit(Date.self), .explicit(String.self), using: AppStateImpl.init(theme:boot:version:))
 @SingletonRegister((any Theme).self, factory: ThemeImpl.init)
-@AutoRegister((any ABTests).self, factory: ABTestsImpl.init)
-@AutoRegister((any CodeGuards).self, factory: CodeGuardsImpl.init)
+@SingletonRegister((any ABTests).self, factory: ABTestsImpl.init)
+@SingletonRegister((any CodeGuards).self, factory: CodeGuardsImpl.init)
 @SingletonRegister((any ApplicationProxy).self, factory: ApplicationProxyImpl.init(abTests:codeGuards:))
 extension Dependency { }
 
