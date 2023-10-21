@@ -2,11 +2,11 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
-public enum DIAutoRegistration { }
+public enum DIOpaqueAutoRegistration { }
 
 // MARK: - MemberMacro
 
-extension DIAutoRegistration: MemberMacro {
+extension DIOpaqueAutoRegistration: MemberMacro {
     public static func expansion(
         of node: AttributeSyntax,
         providingMembersOf declaration: some DeclGroupSyntax,
@@ -16,7 +16,7 @@ extension DIAutoRegistration: MemberMacro {
             let nodeArgumentList = node.arguments?.as(LabeledExprListSyntax.self)
         else {
             context.addDiagnostics(
-                from: DIAutoRegistration.Errors.missingArguments,
+                from: DIOpaqueAutoRegistration.Errors.missingArguments,
                 node: node
             )
 
@@ -24,10 +24,10 @@ extension DIAutoRegistration: MemberMacro {
         }
 
         guard
-            let returnType = nodeArgumentList.first?.expression.as(MemberAccessExprSyntax.self)?.base
+            let registeredType = nodeArgumentList.first?.expression.as(MemberAccessExprSyntax.self)?.base
         else {
             context.addDiagnostics(
-                from: DIAutoRegistration.Errors.missingReturnType,
+                from: DIOpaqueAutoRegistration.Errors.missingReturnType,
                 node: node
             )
 
@@ -38,61 +38,32 @@ extension DIAutoRegistration: MemberMacro {
             let factory = nodeArgumentList.last?.expression
         else {
             context.addDiagnostics(
-                from: DIAutoRegistration.Errors.missingFactory,
+                from: DIOpaqueAutoRegistration.Errors.missingFactory,
                 node: node
             )
 
             return []
         }
 
-        let numberOfFactoryArguments: Int = {
-            factory
-                .as(MemberAccessExprSyntax.self)?
-                .declName
-                .argumentNames?
-                .arguments
-                .count ?? 0
-        }()
+        let returnType = SyntaxUtils.getPlainType(from: registeredType)
+        let call = SyntaxUtils
+            .getFactoryParameterTypes(from: node)
+            .map { "Self.resolve(\($0).self)" }
+            .joined(separator: ", ")
 
-        let call = Array(
-            repeating: "Self.resolve()",
-            count: numberOfFactoryArguments
-        ).joined(separator: ", ")
-
-        guard let returnTypeName = SyntaxUtils.getPlainTypeName(from: returnType) else {
-            context.addDiagnostics(
-                from: DIAutoRegistration.Errors.unsupportedType,
-                node: declaration
-            )
-            return []
-        }
-
-        var declarations = SyntaxUtils.generateMockFunction(for: returnType, with: returnTypeName)
-
-        declarations.append(contentsOf: [
+        return [
             """
-            static func resolve(_: \(returnType).Type) -> \(returnType) {
-                #if DEBUG
-                \(raw: SyntaxUtils.generateMockFunctionCall(with: returnTypeName))
-                #endif
+            static func resolve(_: \(registeredType).Type) -> some \(returnType) {
                 return (\(factory))(\(raw: call))
             }
-            """,
-
             """
-            static func resolve() -> \(returnType) {
-                return resolve(\(returnType).self)
-            }
-            """
-        ])
-
-        return declarations
+        ]
     }
 }
 
 // MARK: - Errors
 
-extension DIAutoRegistration {
+extension DIOpaqueAutoRegistration {
     enum Errors: Error, CustomStringConvertible {
         case missingArguments
         case missingReturnType

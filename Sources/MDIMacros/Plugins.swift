@@ -7,6 +7,10 @@ struct MDIPlugin: CompilerPlugin {
         DIAutoRegistration.self,
         DISingletonRegistration.self,
         DIFactoryRegistration.self,
-        DIFactoryAutoRegistration.self
+        DIFactoryAutoRegistration.self,
+
+        DIOpaqueAutoRegistration.self,
+        DIOpaqueSingletonRegistration.self,
+        DIOpaqueFactoryRegistration.self
     ]
 }

@@ -7,7 +7,7 @@ import XCTest
 #if canImport(MDIMacros)
 import MDIMacros
 
-let testMacros: [String: Macro.Type] = [
+let existencialTestMacros: [String: Macro.Type] = [
     "AutoRegister": DIAutoRegistration.self,
     "FactoryRegister": DIFactoryRegistration.self,
     "FactoryAutoRegister": DIFactoryAutoRegistration.self,
@@ -15,11 +15,11 @@ let testMacros: [String: Macro.Type] = [
 ]
 #endif
 
-final class MDITests: XCTestCase { }
+final class MDIExistencialTests: XCTestCase { }
 
 // MARK: - SetUp / TearDown
 
-extension MDITests {
+extension MDIExistencialTests {
     override func setUp() {
         super.setUp()
 
@@ -39,7 +39,7 @@ extension MDITests {
 
 // MARK: - Macro expansion tests
 
-extension MDITests {
+extension MDIExistencialTests {
     func testFactoryRegister() throws {
 #if canImport(MDIMacros)
         assertMacroExpansion(
@@ -88,7 +88,7 @@ extension MDITests {
                     }
                 }
                 """,
-                macros: testMacros
+                macros: existencialTestMacros
         )
 #else
         throw XCTSkip("macros are only supported when running tests for the host platform")
@@ -135,7 +135,7 @@ extension MDITests {
                             return mock(arg0)
                         }
                         #endif
-                        return (Test.init(theme:int:))(Self.resolve(), arg0)
+                        return (Test.init(theme:int:))(Dependency.resolve(), arg0)
                     }
 
                     static func resolve(_ arg0: Int) -> (any TestProtocol) {
@@ -143,7 +143,7 @@ extension MDITests {
                     }
                 }
                 """,
-                macros: testMacros
+                macros: existencialTestMacros
         )
 #else
         throw XCTSkip("macros are only supported when running tests for the host platform")
@@ -204,7 +204,7 @@ extension MDITests {
                     }
                 }
                 """,
-                macros: testMacros
+                macros: existencialTestMacros
         )
 #else
         throw XCTSkip("macros are only supported when running tests for the host platform")
@@ -252,7 +252,7 @@ extension MDITests {
                             return mock()
                         }
                         #endif
-                        return (Test.init(nested:))(Self.resolve())
+                        return (Test.init(nested:))(Dependency.resolve())
                     }
 
                     static func resolve() -> (any TestProtocol) {
@@ -260,7 +260,7 @@ extension MDITests {
                     }
                 }
                 """,
-                macros: testMacros
+                macros: existencialTestMacros
         )
 #else
         throw XCTSkip("macros are only supported when running tests for the host platform")
@@ -270,7 +270,7 @@ extension MDITests {
 
 // MARK: - Mocking tests
 
-extension MDITests {
+extension MDIExistencialTests {
     func testMockTypeIsUsedForAutoRegisteredDependencyWhenRegistered() {
         XCTAssertEqual(Self.resolve((any AutoResolvedDependencyProtocol).self).name(), "AutoResolvedDependencyMock")
     }
@@ -289,4 +289,4 @@ extension MDITests {
 @AutoRegister((any AutoResolvedDependencyProtocol).self, factory: AutoResolvedDependencyImpl.init)
 @FactoryRegister((any FactoryResolvedDependencyProtocol).self, factory: FactoryResolvedDependencyImpl.init)
 @SingletonRegister((any SingletonResolvedDependencyProtocol).self, factory: SingletonResolvedDependencyImpl.init)
-extension MDITests { }
+extension MDIExistencialTests { }

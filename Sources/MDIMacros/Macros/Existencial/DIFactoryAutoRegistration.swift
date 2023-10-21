@@ -14,6 +14,17 @@ extension DIFactoryAutoRegistration: MemberMacro {
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
         guard
+            let containerName = SyntaxUtils.getContainerName(from: declaration)
+        else {
+            context.addDiagnostics(
+                from: DIFactoryAutoRegistration.Errors.invalidDeclaration,
+                node: declaration
+            )
+
+            return []
+        }
+
+        guard
             let factory = SyntaxUtils.getFactoryExpression(from: node)
         else {
             context.addDiagnostics(
@@ -48,7 +59,7 @@ extension DIFactoryAutoRegistration: MemberMacro {
         let factoryArguments = factoryTypesFull
             .map { resolve, type in
                 if resolve {
-                    return "Self.resolve()"
+                    return "\(containerName).resolve()"
                 } else {
                     argIndex += 1
                     return "arg\(argIndex-1)"
@@ -117,12 +128,16 @@ extension DIFactoryAutoRegistration: MemberMacro {
 
 extension DIFactoryAutoRegistration {
     enum Errors: Error, CustomStringConvertible {
+        case invalidDeclaration
         case missingReturnType
         case missingFactory
         case unsupportedType
 
         var description: String {
             switch self {
+            case .invalidDeclaration:
+                return "Macro must be applied to type declarations or extensions"
+
             case .missingReturnType:
                 return "Macro expects return type at first argument"
 

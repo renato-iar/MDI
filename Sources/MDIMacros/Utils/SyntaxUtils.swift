@@ -16,7 +16,7 @@ enum SyntaxUtils {
      - note the store type for the mock will be declared in the generated declarations
      */
     static func generateMockFunction(
-        for returnType: ExprSyntax,
+        for returnType: SyntaxProtocol,
         with plainTypeName: String,
         parameters: [SyntaxProtocol] = []
     ) -> [DeclSyntax] {
@@ -42,6 +42,13 @@ enum SyntaxUtils {
         ]
     }
 
+    /**
+     Generates the parameters for calling the mock function, accessing the private holder
+
+     - parameters:
+        - plainTypeName: the plain name of the type for which the dependency is being registered
+        - arguments: the names of the arguments being passed to the mock function
+     */
     static func generateMockFunctionCall(
         with plainTypeName: String,
         arguments: [String] = []
@@ -145,6 +152,33 @@ enum SyntaxUtils {
 
                 return (resolve, dependency)
             }
+    }
+
+    /**
+     Extracts the plain type, removing `any` or `some` constraints
+     */
+    static func getPlainType(from syntax: SyntaxProtocol) -> SyntaxProtocol {
+        if
+            let tupple = syntax.as(TupleExprSyntax.self),
+            tupple.elements.count == 1,
+            let containedType = tupple.elements.first
+        {
+            return getPlainType(from: containedType)
+        }
+
+        if
+            let constrainedType = syntax
+                .as(LabeledExprSyntax.self)?
+                .expression
+                .as(TypeExprSyntax.self)?
+                .type
+                .as(SomeOrAnyTypeSyntax.self)?
+                .constraint
+        {
+            return constrainedType
+        }
+
+        return syntax
     }
 
     /**
