@@ -14,10 +14,17 @@ Zero-cost dependency injection using Swift Macros
 
 - Requires Swift 5.9
 
+## Limitations
+
+Presently, the following limitations exist (due to compiler bug):
+
+- The hub type used to register dependencies must either be a `class` or a `struct`; using `enum`s will result in the compiler failing
+- All dependencies must be registered in the same file where the hub type is declared (they can be split into multiple `extension`s for organization though)
+
 ## Example Usage
 
 Define some type that will serve both as the "assembly hub" and the resolution entry point.
-An empty `enum` should be enough.
+(As stated in Limitations, `enum`s are not supported).
 
 ```
 enum Dependency { }
@@ -129,6 +136,29 @@ Using this approach, `Dependency` will expose a `resolve` method typed:
 ```
 Dependency.resolve(_ arg1: Date, _ arg1: String) -> any AppContextProtocol
 ``````
+
+A variant of `@FactoryRegister` that allows for auto-resolution of dependencies exists.
+Use the cases of `MDIFactoryDependency` to state wether the type is `resolved` or `explicit`.
+E.g. if we have some factory that has dependencies that can be resolver, and others that cannot, as in the previous example:
+
+```swift
+@FactoryRegister(
+    (any AppContextProtocol).self,
+    parameterTypes: .explicit(Date.self), .explicit(String.self), .resolved((any Theme).self),
+    using: AppContext.init(boot:sessionId:theme:)
+)
+extension Dependency { }
+```
+
+This will expose a `resolve` method that exposes `Date` and `String` while  implicitly resolving `Theme`.
+
+```swift
+extension Dependency {
+    static func resolve(_: any AppContextProtocol, _ arg0: Date, _ arg1: String) -> any AppContextProtocol {
+        return (AppContextProtocolImpl.init(boot:sessionId:theme:))(arg0, arg1, Self.resolve())
+    }
+}
+```
 
 ## Installation
 
