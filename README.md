@@ -21,6 +21,40 @@ Presently, the following limitations exist (due to compiler bug):
 - The hub type used to register dependencies must either be a `class` or a `struct`; using `enum`s will result in the compiler failing
 - All dependencies must be registered in the same file where the hub type is declared (they can be split into multiple `extension`s for organization though)
 
+## Version 4.0.0
+
+- Fully deprecates `@FactoryRegister(_:parameterTypes:factory:)` in favour of `@FactoryRegister(_:parameterTypes:using:)` (which allows mixing explict parameters with auto-resolved dependencies)
+- Adopts named parameters when it is possible to retrieve them from the factory definition (e.g. when a method name is used such as `SomeTime.init(resolvableDependencyA:resolvableDependencyB:parameter1:parameter2)`)
+
+## Version 3.0.0
+
+- Add full support for registered opaque types to interplay with non-opaque registrations
+- Soft deprecation of `@FactoryRegister(_:parameterTypes:factory:)`
+
+## Version 2.2.0
+
+- Adds support for registering dependencies into the assembly using opaque types
+
+## Version 2.1.0
+
+- Allows factories to be registered using mixed types: auto-resolved and parametric
+
+## Version 2.0.2
+
+- Remove sample client from products
+
+## Version 2.0.1
+
+- Fix `getPlainTypeName`, which was failing to extract simple types
+
+## Version 2.0.0
+
+- Improve mock functions to take parameters in factories
+
+## Version 1.1.0
+
+- Add mocking
+
 ## Example Usage
 
 ### Plain types & existencials
@@ -28,14 +62,14 @@ Presently, the following limitations exist (due to compiler bug):
 Define some type that will serve both as the "assembly hub" and the resolution entry point.
 (As stated in Limitations, `enum`s are not supported).
 
-```
+```swift
 enum Dependency { }
 ```
 
 On this example, assemblies will be defined in extensions of `Dependency` (although this is not mandatory and can be done directly on the type declaration).
 In the following example, we will assume the following types:
 
-```
+```swift
 protocol ABTestingProtocol { }
 protocol CodeGuardsProtocol { }
 protocol ThemeProtocol { }
@@ -58,7 +92,7 @@ final class Theme: ThemeProtocol {
 
 And then create an assembly to register them:
 
-```
+```swift
 import MDI
 
 @SingletonRegister((any ABTestingProtocol).self, using: ABTesting.init)
@@ -73,7 +107,7 @@ Note that, in the previous example, all dependencies were singletons, but this o
 
 If instead `@AutoRegister` was used:
 
-```
+```swift
 import MDI
 
 @AutoRegister((any ABTestingProtocol).self, using: ABTesting.init)
@@ -88,7 +122,7 @@ Finally, some dependencies require parameters that cannot be resolved, but rathe
 This can easily be achieved via `@FactoryRegister`.
 In the following example, we can resolve `ThemeProtocol`, but not necessarily `boot: Date` or `sessionId: String`.
 
-```
+```swift
 protocol AppContextProtocol {}
 
 final class AppContext: AppContextProtocol {
@@ -110,7 +144,7 @@ final class AppContext: AppContextProtocol {
 
 Using `@FactoryRegister` we can expose the required parameters while even leveraging `resolve(...)` in the factory method to resolve `ThemeProtocol`:
 
-```
+```swift
 import MDI
 
 @FactoryRegister(
@@ -125,8 +159,8 @@ This will expose a `resolve` method that exposes `Date` and `String` while  impl
 
 ```swift
 extension Dependency {
-    static func resolve(_: any AppContextProtocol, _ arg0: Date, _ arg1: String) -> any AppContextProtocol {
-        return (AppContextProtocolImpl.init(boot:sessionId:theme:))(arg0, arg1, Self.resolve())
+    static func resolve(_: any AppContextProtocol, boot: Date, sessionId: String) -> any AppContextProtocol {
+        return (AppContextProtocolImpl.init(boot:sessionId:theme:))(boot, sessionId, Self.resolve())
     }
 }
 ```

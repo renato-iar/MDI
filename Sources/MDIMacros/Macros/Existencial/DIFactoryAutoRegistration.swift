@@ -46,27 +46,47 @@ extension DIFactoryAutoRegistration: MemberMacro {
             return []
         }
 
+        let factoryNamedParameters = SyntaxUtils.getFactoryNamedParameters(from: factory)
         let factoryTypesFull = SyntaxUtils.getFactoryRegistrableParameterTypes(from: node)
         let factoryTypes = factoryTypesFull.compactMap { $0.resolve ? nil : $0.type }
-        let factoryParameters = factoryTypes
-            .enumerated()
-            .map { index, type in
-                "_ arg\(index): \(type)"
-            }
-            .joined(separator: ", ")
-        let factoryParameterNames = (0 ..< factoryTypes.count).map { "arg\($0)" }
+//        let factoryParameters = factoryTypes
+//            .enumerated()
+//            .map { index, type in
+//                "_ arg\(index): \(type)"
+//            }
+//            .joined(separator: ", ")
         var argIndex = 0
-        let factoryArguments = factoryTypesFull
-            .map { resolve, type in
-                if resolve {
-                    return "\(containerName).resolve(\(type).self)"
-                } else {
-                    argIndex += 1
-                    return "arg\(argIndex-1)"
+        var factoryParameters: [String] = []
+        var factoryParameterNames: [String] = []
+        var factoryArguments: [String] = []
+
+        factoryTypesFull
+            .enumerated()
+            .forEach {
+                guard !$0.element.resolve else {
+                    factoryArguments.append("\(containerName).resolve(\($0.element.type).self)")
+                    return
                 }
+
+                let prefix: String
+                let parameter: String
+
+                if
+                    let namedParameter = factoryNamedParameters[safe: $0.offset],
+                    let namedParameter
+                {
+                    prefix = ""
+                    parameter = namedParameter
+                } else {
+                    prefix = "_ "
+                    parameter = "arg\(argIndex)"
+                    argIndex += 1
+                }
+
+                factoryParameters.append("\(prefix)\(parameter): \($0.element.type)")
+                factoryParameterNames.append(parameter)
+                factoryArguments.append(parameter)
             }
-            .joined(separator: ", ")
-        let publicFactoryArguments = factoryParameterNames.joined(separator: ", ")
 
         guard let returnTypePlainName = SyntaxUtils.getPlainTypeName(from: returnType) else {
             context.addDiagnostics(
@@ -103,17 +123,17 @@ extension DIFactoryAutoRegistration: MemberMacro {
         } else {
             declarations.append(contentsOf: [
                     """
-                    static func resolve(_: \(returnType).Type, \(raw: factoryParameters)) -> \(returnType) {
+                    static func resolve(_: \(returnType).Type, \(raw: factoryParameters.joined(separator: ", "))) -> \(returnType) {
                         #if DEBUG
                         \(raw: SyntaxUtils.generateMockFunctionCall(with: returnTypePlainName, arguments: factoryParameterNames))
                         #endif
-                        return (\(factory))(\(raw: factoryArguments))
+                        return (\(factory))(\(raw: factoryArguments.joined(separator: ", ")))
                     }
                     """,
 
                     """
-                    static func resolve(\(raw: factoryParameters)) -> \(returnType) {
-                        return resolve(\(returnType).self, \(raw: publicFactoryArguments))
+                    static func resolve(\(raw: factoryParameters.joined(separator: ", "))) -> \(returnType) {
+                        return (\(factory))(\(raw: factoryArguments.joined(separator: ", ")))
                     }
                     """
             ]

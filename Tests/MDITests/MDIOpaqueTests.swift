@@ -41,8 +41,8 @@ extension MDIOpaqueTests {
                 }
                 extension Dependency {
 
-                    static func resolve(_: (any TestProtocol).Type, _ arg0: Int) -> some TestProtocol {
-                        return (Test.init(theme:int:))(Self.resolve((any Theme).self), arg0)
+                    static func resolve(_: (any TestProtocol).Type, int: Int) -> some TestProtocol {
+                        return (Test.init(theme:int:))(Dependency.resolve((any Theme).self), int)
                     }
                 }
                 """,

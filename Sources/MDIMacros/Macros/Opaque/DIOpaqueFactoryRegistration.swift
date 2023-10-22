@@ -35,27 +35,49 @@ extension DIOpaqueFactoryRegistration: MemberMacro {
             return []
         }
 
+        guard
+            let containerName = SyntaxUtils.getContainerName(from: declaration)
+        else {
+            context.addDiagnostics(
+                from: DIOpaqueFactoryRegistration.Errors.invalidDeclaration,
+                node: declaration
+            )
+            return []
+        }
+
         let returnType = SyntaxUtils.getPlainType(from: registeredType)
         let factoryTypesFull = SyntaxUtils.getFactoryRegistrableParameterTypes(from: node)
-        let factoryTypes = factoryTypesFull.compactMap { $0.resolve ? nil : $0.type }
-        let factoryParameters = factoryTypes
-            .enumerated()
-            .map { index, type in
-                "_ arg\(index): \(type)"
-            }
-            .joined(separator: ", ")
+        let factoryNamedParameters = SyntaxUtils.getFactoryNamedParameters(from: factory)
 
         var argIndex = 0
-        let factoryArguments = factoryTypesFull
-            .map { resolve, type in
+        var factoryParametersArray: [String] = []
+        var factoryArgumentsArray: [String] = []
+
+        factoryTypesFull
+            .enumerated()
+            .forEach {
+                let index = $0.offset
+                let resolve = $0.element.resolve
+                let type = $0.element.type
+
                 if resolve {
-                    return "Self.resolve(\(type).self)"
+                    factoryArgumentsArray.append("\(containerName).resolve(\(type).self)")
+                } else
+                if
+                    let namedParameter = factoryNamedParameters[safe: index],
+                    let namedParameter
+                {
+                    factoryParametersArray.append("\(namedParameter): \(type)")
+                    factoryArgumentsArray.append(namedParameter)
                 } else {
+                    factoryParametersArray.append("_ arg\(argIndex): \(type)")
+                    factoryArgumentsArray.append("arg\(argIndex)")
                     argIndex += 1
-                    return "arg\(argIndex-1)"
                 }
             }
-            .joined(separator: ", ")
+
+        let factoryParameters = factoryParametersArray.joined(separator: ", ")
+        let factoryArguments = factoryArgumentsArray.joined(separator: ", ")
 
         if factoryParameters.isEmpty {
             return [
@@ -81,12 +103,16 @@ extension DIOpaqueFactoryRegistration: MemberMacro {
 
 extension DIOpaqueFactoryRegistration {
     enum Errors: Error, CustomStringConvertible {
+        case invalidDeclaration
         case missingReturnType
         case missingFactory
         case unsupportedType
 
         var description: String {
             switch self {
+            case .invalidDeclaration:
+                return "Macro must be applied to type declarations or extensions"
+
             case .missingReturnType:
                 return "Macro expects return type at first argument"
 

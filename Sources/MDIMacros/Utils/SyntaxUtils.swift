@@ -98,6 +98,19 @@ enum SyntaxUtils {
             .expression
     }
 
+    static func getFactoryNamedParameters(from expression: ExprSyntax) -> [String?] {
+        expression
+            .as(MemberAccessExprSyntax.self)?
+            .declName
+            .argumentNames?
+            .arguments
+            .map { argument in
+                let name = argument.as(DeclNameArgumentSyntax.self)?.name.text
+
+                return name == "_" ? nil : name
+            } ?? []
+    }
+
     /**
      Extracts the parameter types of the factory
 
