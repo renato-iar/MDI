@@ -21,6 +21,12 @@ Presently, the following limitations exist (due to compiler bug):
 - The hub type used to register dependencies must either be a `class` or a `struct`; using `enum`s will result in the compiler failing
 - All dependencies must be registered in the same file where the hub type is declared (they can be split into multiple `extension`s for organization though)
 
+# Versions
+
+## Version 4.1.0
+
+- Restores factory for "naked" types, treating all stated dependencies as explicit.
+
 ## Version 4.0.0
 
 - Fully deprecates `@FactoryRegister(_:parameterTypes:factory:)` in favour of `@FactoryRegister(_:parameterTypes:using:)` (which allows mixing explict parameters with auto-resolved dependencies)

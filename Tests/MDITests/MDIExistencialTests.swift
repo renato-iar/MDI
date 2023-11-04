@@ -43,11 +43,6 @@ extension MDIExistencialTests {
 #if canImport(MDIMacros)
         assertMacroExpansion(
                 """
-                protocol TestProtocol {}
-                struct Test: TestProtocol {
-                    init(theme: any Theme, int: Int, _ session: String) { }
-                }
-
                 @FactoryAutoRegister((any TestProtocol).self, parameterTypes: .resolved((any Theme).self), .explicit(Int.self), .explicit(String.self), using: Test.init(theme:int:_:))
                 extension Dependency {
                 }
@@ -55,10 +50,6 @@ extension MDIExistencialTests {
                 expandedSource:
                 """
 
-                protocol TestProtocol {}
-                struct Test: TestProtocol {
-                    init(theme: any Theme, int: Int, _ session: String) { }
-                }
                 extension Dependency {
 
                     #if DEBUG
@@ -94,15 +85,56 @@ extension MDIExistencialTests {
 #endif
     }
 
+    func testFactoryAutoRegisterWithFullExplicitTypes() throws {
+#if canImport(MDIMacros)
+        assertMacroExpansion(
+                """
+                @FactoryAutoRegister((any AppState).self, parameterTypes: Date.self, String.self, factory: AppStateImpl.factory(boot:version:))
+                extension Dependency {
+                }
+                """,
+                expandedSource:
+                """
+
+                extension Dependency {
+
+                    #if DEBUG
+                    fileprivate enum AppState_MockHolder {
+                        static var mock: ((Date, String) -> (any AppState))? = nil
+                    }
+                    #endif
+
+                    static func mock(_: (any AppState).Type, factory: ((Date, String) -> (any AppState))?) {
+                        #if DEBUG
+                        AppState_MockHolder.mock = factory
+                        #endif
+                    }
+
+                    static func resolve(_: (any AppState).Type, boot: Date, version: String) -> (any AppState) {
+                        #if DEBUG
+                        if let mock = AppState_MockHolder.mock {
+                            return mock(boot, version)
+                        }
+                        #endif
+                        return (AppStateImpl.factory(boot:version:))(boot, version)
+                    }
+
+                    static func resolve(boot: Date, version: String) -> (any AppState) {
+                        return (AppStateImpl.factory(boot:version:))(boot, version)
+                    }
+                }
+                """,
+                macros: existencialTestMacros
+        )
+#else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+#endif
+    }
+
     func testSingletonRegister() throws {
 #if canImport(MDIMacros)
         assertMacroExpansion(
                 """
-                protocol TestProtocol {}
-                struct Test: TestProtocol {
-                    init() { }
-                }
-
                 @SingletonRegister((any TestProtocol).self, factory: Test.init)
                 extension Dependency {
                 }
@@ -110,10 +142,6 @@ extension MDIExistencialTests {
                 expandedSource:
                 """
 
-                protocol TestProtocol {}
-                struct Test: TestProtocol {
-                    init() { }
-                }
                 extension Dependency {
 
                     #if DEBUG
@@ -160,11 +188,6 @@ extension MDIExistencialTests {
 #if canImport(MDIMacros)
         assertMacroExpansion(
                 """
-                protocol TestProtocol {}
-                struct Test: TestProtocol {
-                    init(nested: any Nested) { }
-                }
-
                 @AutoRegister((any TestProtocol).self, parameterTypes: (any Nested).self, using: Test.init(nested:))
                 extension Dependency {
                 }
@@ -172,10 +195,6 @@ extension MDIExistencialTests {
                 expandedSource:
                 """
 
-                protocol TestProtocol {}
-                struct Test: TestProtocol {
-                    init(nested: any Nested) { }
-                }
                 extension Dependency {
 
                     #if DEBUG

@@ -23,11 +23,6 @@ extension MDIOpaqueTests {
 #if canImport(MDIMacros)
         assertMacroExpansion(
                 """
-                protocol TestProtocol {}
-                struct Test: TestProtocol {
-                    init(theme: any Theme, int: Int) { }
-                }
-
                 @OpaqueFactoryRegister((any TestProtocol).self, parameterTypes: .resolved((any Theme).self), .explicit(Int.self), using: Test.init(theme:int:))
                 extension Dependency {
                 }
@@ -35,10 +30,6 @@ extension MDIOpaqueTests {
                 expandedSource:
                 """
 
-                protocol TestProtocol {}
-                struct Test: TestProtocol {
-                    init(theme: any Theme, int: Int) { }
-                }
                 extension Dependency {
 
                     static func resolve(_: (any TestProtocol).Type, int: Int) -> some TestProtocol {
@@ -53,15 +44,35 @@ extension MDIOpaqueTests {
 #endif
     }
 
+    func testFactoryAutoRegisterWithFullExplicitTypes() throws {
+#if canImport(MDIMacros)
+        assertMacroExpansion(
+                """
+                @OpaqueFactoryRegister((any AppState).self, parameterTypes: Date.self, String.self, factory: AppStateImpl.factory(boot:version:))
+                extension Dependency {
+                }
+                """,
+                expandedSource:
+                """
+
+                extension Dependency {
+
+                    static func resolve(_: (any AppState).Type, boot: Date, version: String) -> some AppState {
+                        return (AppStateImpl.factory(boot:version:))(boot, version)
+                    }
+                }
+                """,
+                macros: opaqueTestMacros
+        )
+#else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+#endif
+    }
+
     func testSingletonRegister() throws {
 #if canImport(MDIMacros)
         assertMacroExpansion(
                 """
-                protocol TestProtocol {}
-                struct Test: TestProtocol {
-                    init() { }
-                }
-
                 @OpaqueSingletonRegister((any TestProtocol).self, factory: Test.init)
                 extension Dependency {
                 }
@@ -69,10 +80,6 @@ extension MDIOpaqueTests {
                 expandedSource:
                 """
 
-                protocol TestProtocol {}
-                struct Test: TestProtocol {
-                    init() { }
-                }
                 extension Dependency {
 
                     fileprivate enum TestProtocol_Holder {
@@ -96,11 +103,6 @@ extension MDIOpaqueTests {
 #if canImport(MDIMacros)
         assertMacroExpansion(
                 """
-                protocol TestProtocol {}
-                struct Test: TestProtocol {
-                    init(nested: any Nested) { }
-                }
-
                 @OpaqueAutoRegister((any TestProtocol).self, parameterTypes: (any Nested).self, factory: Test.init(nested:))
                 extension Dependency {
                 }
@@ -108,10 +110,6 @@ extension MDIOpaqueTests {
                 expandedSource:
                 """
 
-                protocol TestProtocol {}
-                struct Test: TestProtocol {
-                    init(nested: any Nested) { }
-                }
                 extension Dependency {
 
                     static func resolve(_: (any TestProtocol).Type) -> some TestProtocol {

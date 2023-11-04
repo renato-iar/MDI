@@ -144,26 +144,30 @@ enum SyntaxUtils {
         return types
             .inRange(1 ..< types.count - 1)
             .compactMap { type -> (Bool, SyntaxProtocol)? in
-                guard
+                if
                     let enumerationItem = type.as(LabeledExprSyntax.self)?.expression.as(FunctionCallExprSyntax.self),
                     let caseName = enumerationItem.calledExpression.as(MemberAccessExprSyntax.self)?.declName.baseName.text,
                     enumerationItem.arguments.count == 1,
                     let dependency = enumerationItem.arguments.first?.expression.as(MemberAccessExprSyntax.self)?.base
-                else {
-                    return nil
-                }
+                {
+                    let resolve: Bool
 
-                let resolve: Bool
+                    if caseName == "resolved" {
+                        resolve = true
+                    } else if caseName == "explicit" {
+                        resolve = false
+                    } else {
+                        return nil
+                    }
 
-                if caseName == "resolved" {
-                    resolve = true
-                } else if caseName == "explicit" {
-                    resolve = false
+                    return (resolve, dependency)
+                } else if
+                    let dependency = type.as(LabeledExprSyntax.self)?.expression.as(MemberAccessExprSyntax.self)?.base
+                {
+                    return (false, dependency)
                 } else {
                     return nil
                 }
-
-                return (resolve, dependency)
             }
     }
 

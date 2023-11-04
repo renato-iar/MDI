@@ -49,12 +49,6 @@ extension DIFactoryAutoRegistration: MemberMacro {
         let factoryNamedParameters = SyntaxUtils.getFactoryNamedParameters(from: factory)
         let factoryTypesFull = SyntaxUtils.getFactoryRegistrableParameterTypes(from: node)
         let factoryTypes = factoryTypesFull.compactMap { $0.resolve ? nil : $0.type }
-//        let factoryParameters = factoryTypes
-//            .enumerated()
-//            .map { index, type in
-//                "_ arg\(index): \(type)"
-//            }
-//            .joined(separator: ", ")
         var argIndex = 0
         var factoryParameters: [String] = []
         var factoryParameterNames: [String] = []
