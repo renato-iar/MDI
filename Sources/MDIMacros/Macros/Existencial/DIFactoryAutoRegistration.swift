@@ -107,9 +107,18 @@ extension DIFactoryAutoRegistration: MemberMacro {
                         return (\(factory))()
                     }
                     """,
+
                     """
                     static func resolve() -> \(returnType) {
                         return resolve(\(returnType).self)
+                    }
+                    """,
+
+                    """
+                    static func factory(of _: \(returnType).Type) -> MDIFactory<\(returnType)> {
+                        return MDIFactory {
+                            return resolve(\(returnType).self)
+                        }
                     }
                     """
             ]
@@ -127,7 +136,31 @@ extension DIFactoryAutoRegistration: MemberMacro {
 
                     """
                     static func resolve(\(raw: factoryParameters.joined(separator: ", "))) -> \(returnType) {
-                        return (\(factory))(\(raw: factoryArguments.joined(separator: ", ")))
+                        return \(raw: containerName).resolve(\(returnType).self, \(raw: factoryParameterNames.map{ "\($0): \($0)" }.joined(separator: ", ")))
+                    }
+                    """,
+
+                    """
+                    struct \(raw: returnTypePlainName)Factory {
+                        fileprivate init() {}
+
+                        public func make(\(raw: factoryParameters.joined(separator: ", "))) -> \(returnType) {
+                            return \(raw: containerName).resolve(\(returnType).self, \(raw: factoryParameterNames.map{ "\($0): \($0)" }.joined(separator: ", ")))
+                        }
+                    }
+                    """,
+
+                    """
+                    static func factory(of: \(returnType).Type) -> \(raw: returnTypePlainName)Factory {
+                        return \(raw: returnTypePlainName)Factory()
+                    }
+                    """,
+
+                    """
+                    static func factory(of: \(returnType).Type, \(raw: factoryParameters.joined(separator: ", "))) -> MDIFactory<\(returnType)> {
+                        return MDIFactory {
+                            return \(raw: containerName).resolve(\(returnType).self, \(raw: factoryParameterNames.map{ "\($0): \($0)" }.joined(separator: ", ")))
+                        }
                     }
                     """
             ]

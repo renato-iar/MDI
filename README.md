@@ -23,6 +23,15 @@ Presently, the following limitations exist (due to compiler bug):
 
 # Versions
 
+## Version 4.2.0
+
+- Introduces factories for registered types
+- Soft deprecates `@FactoryRegister(_:parameterTypes:using:)` in favour of `@Register(_:parameterTypes:using:)`
+- Soft deprecates `@FactoryRegister(_:parameterTypes:factory:)` in favour of `@Register(_:parameterTypes:factory:)`
+- Soft deprecates `@OpaqueFactoryRegister(_:parameterTypes:using:)` in favour of `@OpaqueRegister(_:parameterTypes:using:)`
+- Soft deprecates `@OpaqueFactoryRegister(_:parameterTypes:factory:)` in favour of `@OpaqueRegister(_:parameterTypes:factory:)`
+- Resolves a bug in `DIFactoryAutoRegistration` where the shorthand `resolve` method failed to use the mock as it used the factory directly
+
 ## Version 4.1.0
 
 - Restores factory for "naked" types, treating all stated dependencies as explicit.
@@ -167,6 +176,68 @@ This will expose a `resolve` method that exposes `Date` and `String` while  impl
 extension Dependency {
     static func resolve(_: any AppContextProtocol, boot: Date, sessionId: String) -> any AppContextProtocol {
         return (AppContextProtocolImpl.init(boot:sessionId:theme:))(boot, sessionId, Self.resolve())
+    }
+}
+```
+
+### Factories
+
+All registered types (save for singletons) now expose factory methods/types.
+If a dependency that requires no parameters for resolution, a single `factory(of: ...)` method will be exposed.
+E.g. for the type:
+
+```swift
+@AutoRegister((any ABTestingProtocol).self, using: ABTesting.init)
+extension Dependency { ... }
+```
+
+A single factory method will be exposed:
+
+```swift
+extension Dependency {
+    ...
+    static func factory(of _: (any ABTestingProtocol).Type) -> MDIFactory<any ABTestingProtocol> {
+        return Dependency.resolve((any ABTestingProtocol).self)
+    }
+}
+```
+
+For opaque types, the main difference is that `MDIFactory` returns `some ABTestingProtocol` instead of the existencial.
+Whenever a dependency requires parameters for resolution, a factory type will be created and two factory methods will be exposed.
+For the following example:
+
+```swift
+@FactoryRegister(
+    (any AppContextProtocol).self,
+    parameterTypes: .explicit(Date.self), .explicit(String.self), .resolved((any Theme).self),
+    using: AppContext.init(boot:sessionId:theme:)
+)
+extension Dependency { }
+```
+
+A type `AppContextProtocolFactory` will be declared, and two methods exposed:
+
+```swift
+extension Dependency {
+    ...
+    struct AppContextProtocolFactory {
+        fileprivate init() {
+        
+        }
+
+        public func make(boot: Date, sessionId: String) -> any AppContextProtocol {
+            return Dependency.resolve((any AppContextProtocol).self, boot: boot, sessionId: sessionId)
+        }
+    }
+
+    static func factory(of: (any AppContextProtocol).Type) -> AppContextProtocolFactory {
+        return AppContextProtocolFactory()
+    }
+
+    static func factory(of: (any AppContextProtocol).Type, boot: Date, sessionId: String) -> MDIFactory<any AppContextProtocol> {
+        return MDIFactory {
+            MDIDependency.resolve((any AppContextProtocol).self, boot: boot, sessionId: sessionId)
+        }
     }
 }
 ```

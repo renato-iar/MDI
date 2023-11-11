@@ -44,12 +44,16 @@ struct Dependency {
     static func resolve() -> Double { 0 }
 }
 
-@FactoryRegister((any AppState).self, parameterTypes: .resolved((any Theme).self), .explicit(Date.self), .explicit(String.self), using: AppStateImpl.init(theme:boot:version:))
-@OpaqueSingletonRegister((any Theme).self, using: ThemeImpl.init)
+@Register((any AppState).self, parameterTypes: .resolved((any Theme).self), .explicit(Date.self), .explicit(String.self), using: AppStateImpl.init(theme:boot:version:))
+@Register((any Theme).self, using: ThemeImpl.init)
 @OpaqueSingletonRegister((any ABTests).self, using: ABTestsImpl.init)
 @OpaqueSingletonRegister((any CodeGuards).self, using: CodeGuardsImpl.init)
 @OpaqueSingletonRegister((any ApplicationProxy).self, parameterTypes: (any ABTests).self, (any CodeGuards).self, using: ApplicationProxyImpl.init(abTests:codeGuards:))
 extension Dependency { }
 
-let existencialAppState: any AppState = Dependency.resolve(boot: Date(), version: "1.0.0")
-let existencialApplication: any ApplicationProxy = Dependency.resolve(ApplicationProxy.self)
+let forwardingAppStateFactory = Dependency.factory(of: AppState.self, boot: Date(), version: "1.0.1")
+let appState = forwardingAppStateFactory.make()
+
+let opaqueAppStateFactory = Dependency.factory(of: AppState.self)
+let opaqueAppState = opaqueAppStateFactory.make(boot: Date(), version: "1.0.0")
+let application: any ApplicationProxy = Dependency.resolve(ApplicationProxy.self)
