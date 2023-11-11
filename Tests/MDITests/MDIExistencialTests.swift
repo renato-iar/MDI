@@ -74,7 +74,26 @@ extension MDIExistencialTests {
                     }
 
                     static func resolve(int: Int, _ arg0: String) -> (any TestProtocol) {
-                        return (Test.init(theme:int:_:))(Dependency.resolve((any Theme).self), int, arg0)
+                        return Dependency.resolve((any TestProtocol).self, int: int, arg0: arg0)
+                    }
+
+                    struct TestProtocolFactory {
+                        fileprivate init() {
+                        }
+
+                        public func make(int: Int, _ arg0: String) -> (any TestProtocol) {
+                            return Dependency.resolve((any TestProtocol).self, int: int, arg0: arg0)
+                        }
+                    }
+
+                    static func factory(of: (any TestProtocol).Type) -> TestProtocolFactory {
+                        return TestProtocolFactory()
+                    }
+
+                    static func factory(of: (any TestProtocol).Type, int: Int, _ arg0: String) -> MDIFactory<(any TestProtocol)> {
+                        return MDIFactory {
+                            return Dependency.resolve((any TestProtocol).self, int: int, arg0: arg0)
+                        }
                     }
                 }
                 """,
@@ -120,7 +139,26 @@ extension MDIExistencialTests {
                     }
 
                     static func resolve(boot: Date, version: String) -> (any AppState) {
-                        return (AppStateImpl.factory(boot:version:))(boot, version)
+                        return Dependency.resolve((any AppState).self, boot: boot, version: version)
+                    }
+
+                    struct AppStateFactory {
+                        fileprivate init() {
+                        }
+
+                        public func make(boot: Date, version: String) -> (any AppState) {
+                            return Dependency.resolve((any AppState).self, boot: boot, version: version)
+                        }
+                    }
+
+                    static func factory(of: (any AppState).Type) -> AppStateFactory {
+                        return AppStateFactory()
+                    }
+
+                    static func factory(of: (any AppState).Type, boot: Date, version: String) -> MDIFactory<(any AppState)> {
+                        return MDIFactory {
+                            return Dependency.resolve((any AppState).self, boot: boot, version: version)
+                        }
                     }
                 }
                 """,
@@ -221,6 +259,12 @@ extension MDIExistencialTests {
                     static func resolve() -> (any TestProtocol) {
                         return resolve((any TestProtocol).self)
                     }
+
+                    static func factory(of _: (any TestProtocol).Type) -> MDIFactory<(any TestProtocol)> {
+                        return MDIFactory {
+                            return resolve((any TestProtocol).self)
+                        }
+                    }
                 }
                 """,
                 macros: existencialTestMacros
@@ -250,6 +294,6 @@ extension MDIExistencialTests {
 // MARK: - Registration
 
 @AutoRegister((any AutoResolvedDependencyProtocol).self, using: AutoResolvedDependencyImpl.init)
-@FactoryRegister((any FactoryResolvedDependencyProtocol).self, using: FactoryResolvedDependencyImpl.init)
+@Register((any FactoryResolvedDependencyProtocol).self, using: FactoryResolvedDependencyImpl.init)
 @SingletonRegister((any SingletonResolvedDependencyProtocol).self, using: SingletonResolvedDependencyImpl.init)
 extension MDIExistencialTests { }

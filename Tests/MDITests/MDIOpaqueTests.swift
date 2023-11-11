@@ -35,6 +35,25 @@ extension MDIOpaqueTests {
                     static func resolve(_: (any TestProtocol).Type, int: Int) -> some TestProtocol {
                         return (Test.init(theme:int:))(Dependency.resolve((any Theme).self), int)
                     }
+
+                    struct TestProtocolFactory {
+                        fileprivate init() {
+                        }
+
+                        public func make(int: Int) -> some TestProtocol {
+                            return Dependency.resolve((any TestProtocol).self, int: int)
+                        }
+                    }
+
+                    static func factory(of: (any TestProtocol).Type) -> TestProtocolFactory {
+                        return TestProtocolFactory()
+                    }
+
+                    static func factory(of: (any TestProtocol).Type, int: Int) -> MDIFactory<some TestProtocol> {
+                        return MDIFactory {
+                            Dependency.resolve((any TestProtocol).self, int: int)
+                        }
+                    }
                 }
                 """,
                 macros: opaqueTestMacros
@@ -59,6 +78,25 @@ extension MDIOpaqueTests {
 
                     static func resolve(_: (any AppState).Type, boot: Date, version: String) -> some AppState {
                         return (AppStateImpl.factory(boot:version:))(boot, version)
+                    }
+
+                    struct AppStateFactory {
+                        fileprivate init() {
+                        }
+
+                        public func make(boot: Date, version: String) -> some AppState {
+                            return Dependency.resolve((any AppState).self, boot: boot, version: version)
+                        }
+                    }
+
+                    static func factory(of: (any AppState).Type) -> AppStateFactory {
+                        return AppStateFactory()
+                    }
+
+                    static func factory(of: (any AppState).Type, boot: Date, version: String) -> MDIFactory<some AppState> {
+                        return MDIFactory {
+                            Dependency.resolve((any AppState).self, boot: boot, version: version)
+                        }
                     }
                 }
                 """,
@@ -114,6 +152,12 @@ extension MDIOpaqueTests {
 
                     static func resolve(_: (any TestProtocol).Type) -> some TestProtocol {
                         return (Test.init(nested:))(Self.resolve((any Nested).self))
+                    }
+
+                    static func factory(of _: (any TestProtocol).Type) -> MDIFactory<some TestProtocol> {
+                        return MDIFactory {
+                            return resolve((any TestProtocol).self)
+                        }
                     }
                 }
                 """,

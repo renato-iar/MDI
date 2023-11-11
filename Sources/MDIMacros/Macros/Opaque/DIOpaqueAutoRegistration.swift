@@ -56,6 +56,14 @@ extension DIOpaqueAutoRegistration: MemberMacro {
             static func resolve(_: \(registeredType).Type) -> some \(returnType) {
                 return (\(factory))(\(raw: call))
             }
+            """,
+
+            """
+            static func factory(of _: \(registeredType).Type) -> MDIFactory<some \(returnType)> {
+                return MDIFactory {
+                    return resolve(\(registeredType).self)
+                }
+            }
             """
         ]
     }

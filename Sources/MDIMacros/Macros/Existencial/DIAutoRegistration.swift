@@ -84,6 +84,14 @@ extension DIAutoRegistration: MemberMacro {
             static func resolve() -> \(returnType) {
                 return resolve(\(returnType).self)
             }
+            """,
+
+            """
+            static func factory(of _: \(returnType).Type) -> MDIFactory<\(returnType)> {
+                return MDIFactory {
+                    return resolve(\(returnType).self)
+                }
+            }
             """
         ])
 
